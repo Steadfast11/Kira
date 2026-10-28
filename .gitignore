@@ -1,0 +1,43 @@
+Kira.app/
+__pycache__/
+.DS_Store
+
+# Local credentials and runtime state
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+settings.json
+skills.json
+recent.jsonl
+log.jsonl
+memory.md
+app.err
+
+# GitHub holds just the app. Agent instructions, skills and the website stay on this Mac.
+AGENTS.md
+CLAUDE.md
+AGENTS.local.md
+CLAUDE.local.md
+.agents/
+.claude/
+.cursor/
+index.html
+docs/kira-film.mp4
+docs/film-poster.png
+
+# Nix build result symlinks
+/result
+/result-*
+/test-artifacts/
+# Devbox generated artifacts
+.devbox/
+
+# Local work logs, caches and the personal code graph (never published)
+work/
+graphify-out/
+.pytest_cache/
+.ruff_cache/
