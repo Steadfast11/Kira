@@ -1,0 +1,298 @@
+{
+ "voice": "af_heart",
+ "wordmark": "Kira",
+ "lines": {
+  "welcome": {
+   "text": "Welcome to Kira. I'm your assistant.",
+   "ms": 2570,
+   "words": [
+    [
+     "Welcome",
+     110
+    ],
+    [
+     "to",
+     560
+    ],
+    [
+     "Kira.",
+     780
+    ],
+    [
+     "I'm",
+     1410
+    ],
+    [
+     "your",
+     1700
+    ],
+    [
+     "assistant.",
+     1820
+    ]
+   ]
+  },
+  "askName": {
+   "text": "So, what should I call you?",
+   "ms": 1780,
+   "words": [
+    [
+     "So,",
+     110
+    ],
+    [
+     "what",
+     410
+    ],
+    [
+     "should",
+     500
+    ],
+    [
+     "I",
+     770
+    ],
+    [
+     "call",
+     930
+    ],
+    [
+     "you?",
+     1220
+    ]
+   ]
+  },
+  "hiThere": {
+   "text": "Hi there, great to meet you!",
+   "ms": 1810,
+   "words": [
+    [
+     "Hi",
+     110
+    ],
+    [
+     "there,",
+     410
+    ],
+    [
+     "great",
+     770
+    ],
+    [
+     "to",
+     970
+    ],
+    [
+     "meet",
+     1190
+    ],
+    [
+     "you!",
+     1380
+    ]
+   ]
+  },
+  "language": {
+   "text": "What language do you speak?",
+   "ms": 1740,
+   "words": [
+    [
+     "What",
+     110
+    ],
+    [
+     "language",
+     290
+    ],
+    [
+     "do",
+     710
+    ],
+    [
+     "you",
+     810
+    ],
+    [
+     "speak?",
+     1140
+    ]
+   ]
+  },
+  "setup": {
+   "text": "Now let's set me up. It only takes a minute.",
+   "ms": 2860,
+   "words": [
+    [
+     "Now",
+     120
+    ],
+    [
+     "let's",
+     390
+    ],
+    [
+     "set",
+     580
+    ],
+    [
+     "me",
+     760
+    ],
+    [
+     "up.",
+     1030
+    ],
+    [
+     "It",
+     1440
+    ],
+    [
+     "only",
+     1580
+    ],
+    [
+     "takes",
+     1840
+    ],
+    [
+     "a",
+     2040
+    ],
+    [
+     "minute.",
+     2260
+    ]
+   ]
+  },
+  "hotkey": {
+   "text": "Hold Control, Option and Space, and say hi.",
+   "ms": 3140,
+   "words": [
+    [
+     "Hold",
+     100
+    ],
+    [
+     "Control,",
+     390
+    ],
+    [
+     "Option",
+     1060
+    ],
+    [
+     "and",
+     1440
+    ],
+    [
+     "Space,",
+     1610
+    ],
+    [
+     "and",
+     2050
+    ],
+    [
+     "say",
+     2180
+    ],
+    [
+     "hi.",
+     2470
+    ]
+   ]
+  },
+  "heard": {
+   "text": "I heard you. That's all it takes.",
+   "ms": 2150,
+   "words": [
+    [
+     "I",
+     110
+    ],
+    [
+     "heard",
+     280
+    ],
+    [
+     "you.",
+     490
+    ],
+    [
+     "That's",
+     900
+    ],
+    [
+     "all",
+     1090
+    ],
+    [
+     "it",
+     1340
+    ],
+    [
+     "takes.",
+     1590
+    ]
+   ]
+  },
+  "farewell": {
+   "text": "You're all set. I'll be right up here whenever you need me.",
+   "ms": 3340,
+   "words": [
+    [
+     "You're",
+     110
+    ],
+    [
+     "all",
+     430
+    ],
+    [
+     "set.",
+     580
+    ],
+    [
+     "I'll",
+     1180
+    ],
+    [
+     "be",
+     1400
+    ],
+    [
+     "right",
+     1620
+    ],
+    [
+     "up",
+     1780
+    ],
+    [
+     "here",
+     1880
+    ],
+    [
+     "whenever",
+     2070
+    ],
+    [
+     "you",
+     2330
+    ],
+    [
+     "need",
+     2550
+    ],
+    [
+     "me.",
+     2780
+    ]
+   ]
+  }
+ },
+ "sounds": {
+  "rise": 5200,
+  "chime": 3000
+ }
+}

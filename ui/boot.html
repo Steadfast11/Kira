@@ -1,0 +1,329 @@
+<!doctype html>
+<!-- Astra project — Copyright (c) 2026 Xasan Abdukhafizov. -->
+<!-- Kira's boot: a frosted blue veil over the desktop, a drop of liquid glass rises from behind the Dock and becomes the orb,
+     the orb lets go of a small drop that lands as the logo's dot while the wordmark writes itself, then Kira speaks and its words
+     appear as it says them. It ends by greeting the user and either opening setup (first launch) or saying goodbye (Show intro):
+     the orb glides up under the notch and is drawn into it, where Kira's own box carries on (the menu bar icon without the notch). Self-contained and offline: loadPage() inlines orb.js, globe.js, catalog.js and
+     ui/boot/timings.json at their markers. Sound and the live voice are played by Swift (the `boot` handler); the page works silent. -->
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kira</title>
+<style>
+  :root { --veil-top:rgba(18,58,138,.40); --veil-bottom:rgba(6,26,74,.52); --ink:#fff; --ink-dim:rgba(255,255,255,.78);
+          --focus:#a9dcff; --ease:cubic-bezier(.22,.61,.36,1); --safe-t:0px; --safe-b:0px; color-scheme:dark; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; height:100%; }
+  body { color:var(--ink); overflow:hidden; -webkit-font-smoothing:antialiased; user-select:none; -webkit-user-select:none;
+         font:500 16px/1.25 -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", system-ui, sans-serif;
+         background:linear-gradient(180deg, var(--veil-top), var(--veil-bottom)); }   /* see-through: Swift's frosted glass is under the page */
+  button { font:inherit; color:inherit; cursor:pointer; }
+  button:focus-visible { outline:2px solid var(--focus); outline-offset:3px; }
+  /* the veil fades in, and slow fields of azure light drift inside it (the orb itself casts no light) */
+  .stage { position:absolute; inset:0; opacity:0; animation:fade 1.2s ease .05s forwards; }
+  .field { position:absolute; inset:-25%; pointer-events:none; filter:blur(60px); opacity:.55;
+           background:radial-gradient(38% 30% at 30% 30%, rgba(70,150,255,.42), transparent 70%), radial-gradient(34% 28% at 74% 62%, rgba(60,200,255,.30), transparent 70%),
+                      radial-gradient(60% 34% at 50% 108%, rgba(50,140,255,.40), transparent 72%); animation:drift 70s ease-in-out infinite alternate; }
+  #orb { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+  /* the logo: a white triangle that draws itself around the landed drop (the black-and-white dot), and the wordmark beside it */
+  .lockup { position:absolute; left:0; right:0; top:56%; display:flex; align-items:center; justify-content:center; gap:clamp(12px,1.6vw,20px);
+            transform:translateY(-50%); transition:opacity .8s ease, transform 1.2s var(--ease); }
+  .mark { width:clamp(48px,5.4vw,68px); height:auto; overflow:visible; }
+  .mark .tri { fill:#fff; fill-opacity:0; stroke:#fff; stroke-width:5; stroke-linejoin:round; stroke-dasharray:190; stroke-dashoffset:190; }
+  .mark .dot { opacity:0; transform-origin:32px 42px; transform:scale(.55); }
+  .word { font:600 clamp(46px,5.6vw,76px)/1 -apple-system, "SF Pro Display", system-ui, sans-serif; letter-spacing:-.03em; color:#cfeaff; white-space:pre; }
+  .word span { display:inline-block; opacity:0; filter:blur(10px); transform:translateY(5px);
+               text-shadow:0 0 1px rgba(170,225,255,.9), 0 0 7px rgba(80,170,255,.55); }   /* a glow that stays on the letters */
+  body.logo .tri { animation:draw 1.1s var(--ease) forwards, fill .6s ease .9s forwards; }
+  body.logo .dot { animation:land .55s var(--ease) .22s forwards; }
+  body.logo .word span { animation:letter .8s var(--ease) forwards; }
+  body.past-logo .lockup { opacity:0; transform:translateY(calc(-50% - 14px)); }
+  /* the words Kira says, each one arriving as it is spoken */
+  .line { position:absolute; left:16px; right:16px; top:56%; transform:translateY(-50%); margin:0; text-align:center; text-wrap:balance;
+          font:600 clamp(30px,4.3vw,58px)/1.12 -apple-system, "SF Pro Display", system-ui, sans-serif; letter-spacing:-.022em;
+          text-shadow:0 2px 22px rgba(0,22,70,.45), 0 1px 2px rgba(0,22,70,.35); transition:opacity .7s ease; }
+  .line .w { display:inline-block; opacity:0; filter:blur(8px); transform:translateY(7px); transition:opacity .6s ease, filter .6s ease, transform .7s var(--ease); }
+  .line .w.on { opacity:1; filter:none; transform:none; }
+  .line.out { opacity:0; }
+  .greet { position:absolute; left:16px; right:16px; top:56%; transform:translateY(-50%); margin:0; text-align:center; font-size:clamp(19px,1.9vw,24px); font-weight:500;
+           color:var(--ink); text-shadow:0 1px 14px rgba(0,22,70,.55); opacity:0; transition:opacity .9s ease; }
+  .greet.on { opacity:1; }
+  .cta { position:absolute; left:50%; top:calc(56% + clamp(54px,7vh,80px)); transform:translate(-50%, 8px); padding:13px 34px; border-radius:999px; opacity:0; visibility:hidden;
+         border:1px solid rgba(255,255,255,.38); font-weight:600; font-size:16px; letter-spacing:.005em; color:#fff;
+         background:linear-gradient(180deg, rgba(120,190,255,.42), rgba(40,120,240,.34)); -webkit-backdrop-filter:blur(18px) saturate(1.4); backdrop-filter:blur(18px) saturate(1.4);
+         box-shadow:inset 0 1px 0 rgba(255,255,255,.4), 0 10px 30px rgba(0,20,70,.28); transition:opacity .8s ease, transform .9s var(--ease), visibility 0s .8s, background .25s; }
+  .cta:hover { background:linear-gradient(180deg, rgba(140,205,255,.52), rgba(55,135,245,.44)); }
+  .cta:active { transform:translate(-50%, 0) scale(.98); }
+  body.cta-on .cta { opacity:1; visibility:visible; transform:translate(-50%, 0); transition:opacity .8s ease, transform .9s var(--ease), visibility 0s; }
+  /* corners: Skip at the top right, sound at the bottom right, both inside the menu bar and the Dock */
+  .corner { position:absolute; right:18px; border:0; background:rgba(255,255,255,.10); color:var(--ink-dim); border-radius:999px;
+            -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); transition:opacity .6s ease, background .2s, color .2s; }
+  .corner:hover { background:rgba(255,255,255,.18); color:var(--ink); }
+  .skip { top:calc(var(--safe-t) + 16px); padding:8px 15px; font-size:13px; }
+  .sound { bottom:calc(var(--safe-b) + 16px); width:38px; height:38px; display:grid; place-items:center; padding:0; }
+  .sound svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+  .sound .off, body.muted .sound .on { display:none; } body.muted .sound .off { display:inline; }
+  body.cta-on .skip, body.leaving .skip, body[data-phase=greet] .skip, body[data-phase=farewell] .skip { opacity:0; pointer-events:none; }
+  body.leaving .stage, body.leaving .line, body.leaving .greet, body.leaving .cta, body.leaving .sound { opacity:0; transition:opacity 1.3s ease; }
+  .sr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
+  @keyframes fade { to { opacity:1; } }
+  @keyframes drift { to { transform:translate(3%,-2%) scale(1.06); } }
+  @keyframes draw { to { stroke-dashoffset:0; } }
+  @keyframes fill { to { fill-opacity:1; } }
+  @keyframes land { to { opacity:1; transform:none; } }
+  @keyframes letter { to { opacity:1; filter:none; transform:none; } }
+  /* Reduce Motion: no rising, flying or blurring; things cross-fade in place */
+  body.calm .field { animation:none; }
+  body.calm .line .w { filter:none; transform:none; transition:opacity .6s ease; }
+  body.calm .word span { filter:none; transform:none; }
+  body.calm.logo .tri { animation:fill .6s ease forwards; stroke-dashoffset:0; }
+  body.calm.logo .dot { animation:land .6s ease forwards; transform:none; }
+  body.calm .lockup, body.calm.past-logo .lockup { transform:translateY(-50%); }
+  body.calm .cta { transform:translate(-50%, 0); }
+</style></head>
+<body data-phase="rise">
+<div class="stage" aria-hidden="true"><div class="field"></div></div>
+<canvas id="orb" aria-hidden="true"></canvas>
+<div class="lockup" id="lockup" role="img" aria-label="Kira">
+  <svg class="mark" id="mark" viewBox="0 0 64 64" aria-hidden="true"><path class="tri" d="M32 6 L59 56 H5 Z"/>
+    <g class="dot"><circle cx="32" cy="42" r="9" fill="#000"/><circle cx="32" cy="42" r="3.6" fill="#fff"/></g></svg>
+  <span class="word" id="word" aria-hidden="true"></span>
+</div>
+<p class="line" id="line" aria-hidden="true"></p>
+<p class="greet" id="greet"></p>
+<button class="cta" id="cta" type="button" data-i18n="boot.cta"></button>
+<button class="corner skip" id="skip" type="button" data-i18n="chrome.skipIntro"></button>
+<button class="corner sound" id="sound" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/>
+  <path class="on" d="M15.5 9a4.2 4.2 0 0 1 0 6M18 6.5a7.8 7.8 0 0 1 0 11"/><path class="off" d="M16 9.5l5 5M21 9.5l-5 5"/></svg></button>
+<p class="sr" id="said" aria-live="polite"></p>
+
+<script>/*GLOBE*/</script>
+<script>/*ORB*/</script>
+<script>/*CATALOG*/</script>
+<script>   // opened in a plain browser no inlining happened: load the files next to this page
+  if (typeof makeGlobe === 'undefined') document.write('<script src="globe.js"><\/script>');
+  if (typeof makeOrb === 'undefined') document.write('<script src="orb.js"><\/script>');
+  if (typeof KIRA === 'undefined') document.write('<script src="catalog.js"><\/script>');
+</script>
+<script>
+  // Change the name here. The recorded "welcome" line says the name in ui/boot/lines.json; when they differ, the line is spoken live.
+  const WORDMARK = 'Kira';
+  // ui/boot/timings.json (loadPage inlines it): each recorded line's text, length and when each word starts (ms).
+  const VOICE = [/*VOICE*/][0] || { wordmark: WORDMARK, lines: {}, sounds: {} };
+  // Timing in ms. The drop rises for RISE (slow start, long gentle finish), glides up while the logo forms, then the words come.
+  const RISE_AT = 300, RISE = 4400, TO_LOGO = 1400, DROP = 1200, LAND = 260, LOGO_HOLD = 1900, GREET_HOLD = 2900, WAIT_VOICE = 400;
+
+  const $ = id => document.getElementById(id), body = document.body;
+  const post = m => { try { webkit.messageHandlers.boot.postMessage(m); } catch (e) {} };   // Swift's `boot` handler; absent in a browser
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+  const env = { mode: 'first', name: '', muted: false, reduced: false, insets: { top: 0, bottom: 0 }, notch: null, status: null };
+  KIRA.setUI('en'); KIRA.apply();   // the intro is English (its voice is); setup after it follows the language the user picks
+  const calm = () => reduced.matches || env.reduced;
+  const phase = p => { if (p && body.dataset.phase !== p) body.dataset.phase = p; return body.dataset.phase; };
+
+  // ---- timeline: each scene awaits its waits; Skip and Esc bump `run`, so the old sequence stops at its next wait
+  const STOP = {}; let run = 0;
+  const wait = (ms, r) => new Promise((ok, no) => setTimeout(() => r === run ? ok() : no(STOP), ms));
+  const bez = (x1, y1, x2, y2) => t => {   // CSS cubic-bezier, solved for x by Newton steps
+    if (t <= 0 || t >= 1) return Math.min(1, Math.max(0, t));
+    let u = t;
+    for (let i = 0; i < 8; i++) {
+      const x = 3 * x1 * u * (1 - u) ** 2 + 3 * x2 * u * u * (1 - u) + u ** 3 - t, d = 3 * x1 * (1 - u) ** 2 + 6 * (x2 - x1) * u * (1 - u) + 3 * (1 - x2) * u * u;
+      if (Math.abs(d) < 1e-6) break; u = Math.min(1, Math.max(0, u - x / d));
+    }
+    return 3 * y1 * u * (1 - u) ** 2 + 3 * y2 * u * u * (1 - u) + u ** 3;
+  };
+  const OUT = bez(.22, .61, .36, 1), INOUT = bez(.45, .05, .25, 1), LINEAR = t => Math.min(1, Math.max(0, t));
+  const mix = (a, b, f) => a + (b - a) * f;
+
+  // ---- the orb: where it is at any moment, from the current move (pure in `now`: the renderer and the tests both ask orbAt)
+  let W = innerWidth, H = innerHeight, R = 120;
+  const spots = {
+    below: () => ({ x: W / 2, y: H + R * 1.25, r: R, a: 1 }), center: () => ({ x: W / 2, y: H * .46, r: R, a: 1 }),
+    top: () => ({ x: W / 2, y: H * .31, r: R * .62, a: 1 }),
+    dock: () => { const n = env.notch, r = Math.max(10, n.h * .62); return { x: n.x, y: n.h + r + 14, r, a: 1 }; },   // just under the notch
+    home: () => { const n = env.notch, r = Math.max(10, n.h * .62) * .8; return { x: n.x, y: -r * 1.4, r, a: 1 }; },   // up inside it
+    menu: () => ({ x: env.status ? env.status.x : W - 90, y: env.status ? env.status.y : 12, r: 5, a: 0 }),
+  };
+  const spot = s => typeof s === 'string' ? spots[s]() : s;
+  const start = performance.now();
+  let move = { at: 0, ms: 0, from: 'below', to: 'below', ease: OUT, kind: '' }, drop = null;
+  const layout = () => { W = innerWidth; H = innerHeight; R = Math.max(86, Math.min(176, Math.min(W, H) * .16)); };
+  const orbAt = now => {
+    const u = move.ms ? Math.min(1, Math.max(0, (now - move.at) / move.ms)) : 1, from = spot(move.from), to = spot(move.to), e = move.ease(u);
+    const main = { x: mix(from.x, to.x, e), y: mix(from.y, to.y, e), r: mix(from.r, to.r, e) };
+    const state = { main, drop: null, pool: null, k1: 0, k2: 0, stretch: 1, alpha: mix(from.a, to.a, e), time: (now - start) / 1000 };
+    if (move.kind === 'rise') {   // liquid until it lets go: a smooth union with a pool at the screen's bottom edge, drawn taller while it clings
+      const k = R * .9, gap = H - (main.y + main.r), clinging = Math.max(0, 1 - gap / k);
+      state.pool = H + 1; state.k1 = k;
+      if (clinging > 0) state.stretch = 1 + .065 * clinging * (1 - clinging * .4);
+      else {   // free: a soft settle, two small swings that die away, no bounce
+        if (move.free == null) {   // when it let go: the progress where its bottom is k above the edge, found by bisection (so orbAt stays pure)
+          const want = (H - k - R - from.y) / (to.y - from.y); let lo = 0, hi = 1;
+          for (let i = 0; i < 30; i++) { const mid = (lo + hi) / 2; if (move.ease(mid) < want) lo = mid; else hi = mid; }
+          move.free = move.at + hi * move.ms;
+        }
+        const t = Math.max(0, now - move.free) / 1000;
+        state.stretch = 1 + .045 * Math.exp(-t / .3) * Math.cos(2 * Math.PI * t / .62);
+      }
+      if (gap > k * 1.2) state.pool = null;
+    }
+    if (move.kind === 'sink') {   // drawn up into the notch: melted onto its lower edge, a little taller as it goes
+      const n = env.notch, u2 = Math.min(1, Math.max(0, (now - move.at) / move.ms));
+      state.sink = { x: n.x, w: n.w, h: n.hardware ? n.h : 1 }; state.k3 = main.r * 1.15;   // a display with no notch: melt into a hairline under the menu bar state.stretch = 1 + .12 * Math.sin(Math.PI * Math.min(1, u2 * 1.2) / 2);
+    }
+    if (drop) {   // the small drop: drawn out of the orb's underside, it glides down, shrinks onto the logo's dot and melts into it
+      const v = Math.min(1, Math.max(0, (now - drop.at) / DROP)), e2 = INOUT(v), b = drop.to;
+      state.drop = { x: mix(main.x, b.x, e2), y: mix(main.y + main.r * .7, b.y, e2) - Math.sin(Math.PI * e2) * main.r * .12, r: mix(main.r * .2, b.r, e2) };
+      state.k2 = main.r * .5;
+      const after = (now - drop.at - DROP) / 380;
+      if (after > 0) state.drop.r = after >= 1 ? 0 : b.r * (1 - after);
+    }
+    return state;
+  };
+  const go = (to, ms, ease = INOUT, kind = '') => { const now = performance.now(), cur = orbAt(now); move = { at: now, ms, from: { ...cur.main, a: cur.alpha }, to, ease, kind }; };
+
+  // ---- drawing, about 60 times a second while visible. Slow frames lower the resolution and cloud detail, never the timing.
+  const orb = makeOrb($('orb'));
+  let level = 0, target = 0, visible = true, frames = 0, slow = 0, last = 0;
+  const frame = now => {
+    if (!visible) { last = 0; return; }
+    if (last) {
+      slow = slow * .95 + (now - last > 24 ? .05 : 0);
+      if (++frames > 90 && slow > .5 && orb.scale > .5) { orb.scale -= .25; orb.octaves = Math.max(2, orb.octaves - 1); orb.resize(); frames = 0; slow = 0; }
+    }
+    last = now;
+    level += (target - level) * (target > level ? .22 : .07);   // the voice lifts the orb's brightness a little: quick up, slow down, never a flicker
+    const s = orbAt(now); s.voice = calm() ? 0 : Math.min(1, level);
+    orb.draw(s);
+    requestAnimationFrame(frame);
+  };
+  const resize = () => { layout(); orb.resize(); };
+
+  // ---- the voice: Swift plays a recorded line and answers boot.voice({id, state}). With no answer in WAIT_VOICE (muted, missing,
+  // no Swift) the words keep their own time. A line with no recording is said live and spaced evenly.
+  const heard = {};   // id -> wakes the speak() waiting for that sound, with the moment it started
+  const started = (id, ms, r) => new Promise(ok => { const t = setTimeout(() => ok(0), ms); heard[id] = at => { clearTimeout(t); ok(at); }; })
+    .then(at => { if (r !== run) throw STOP; return at; });
+  const speak = async (id, r) => {
+    const el = $('line'), line = VOICE.lines[id], recorded = !!line && (id !== 'welcome' || VOICE.wordmark === WORDMARK);
+    const text = recorded ? line.text : id === 'welcome' ? `Welcome to ${WORDMARK}. I'm your assistant.` : line ? line.text : '';
+    const words = recorded ? line.words : text.split(' ').map((w, i) => [w, 120 + i * 330]), ms = recorded ? line.ms : 500 + words.length * 330;
+    el.classList.remove('out'); el.textContent = '';
+    const spans = words.map(([w]) => { const s = document.createElement('span'); s.className = 'w'; s.textContent = w; el.append(s, ' '); return s; });
+    $('said').textContent = text;
+    let t0 = performance.now();
+    if (!env.muted) {
+      const sound = started(id, WAIT_VOICE, r);
+      post(recorded ? { do: 'play', id } : { do: 'say', text, id });
+      t0 = (await sound) || t0;   // the words start with the sound
+    }
+    for (let i = 0; i < spans.length; i++) {
+      const due = t0 + words[i][1] - performance.now();
+      if (due > 0) await wait(due, r);
+      spans[i].classList.add('on');
+    }
+    await wait(Math.max(0, t0 + ms - performance.now()), r);
+  };
+
+  // ---- the scenes
+  const letters = () => { $('word').textContent = ''; [...WORDMARK].forEach((ch, i) => { const s = document.createElement('span'); s.textContent = ch; s.style.animationDelay = `${300 + i * 75}ms`; $('word').append(s); }); };
+  const dotSpot = () => { const b = $('mark').getBoundingClientRect(); return { x: b.left + b.width * 32 / 64, y: b.top + b.height * 42 / 64, r: b.width * 9 / 64 }; };
+  const sound = id => { if (!env.muted) post({ do: 'play', id, sound: true }); };
+  async function intro(r) {
+    phase('rise'); letters();
+    if (calm()) { move = { at: performance.now(), ms: 900, from: { ...spots.top(), a: 0 }, to: 'top', ease: LINEAR, kind: '' }; await wait(500, r); }
+    else {
+      await wait(RISE_AT, r); sound('rise'); go('center', RISE, INOUT, 'rise');
+      await wait(RISE + 200, r);
+      go('top', TO_LOGO, INOUT);
+      await wait(TO_LOGO * .55, r);
+      drop = { at: performance.now(), to: dotSpot() };   // let go of on the way up
+      await wait(DROP - LAND, r);
+    }
+    phase('logo'); body.classList.add('logo');
+    await wait(calm() ? 0 : LAND, r); sound('chime');   // the bell rings as the drop lands
+    await wait(LOGO_HOLD, r);
+    drop = null; body.classList.add('past-logo');
+    await wait(500, r);
+    phase('words'); await speak('welcome', r);
+    await wait(500, r); $('line').classList.add('out'); await wait(700, r);
+    await greet(r);
+  }
+  async function greet(r) {
+    phase('greet');
+    const name = String(env.name || '').trim(), text = name ? KIRA.t('greet.named', { name }) : KIRA.t('greet.none');
+    $('greet').textContent = text; $('greet').classList.add('on'); $('said').textContent = text;
+    if (!env.muted) post(name || KIRA.ui !== 'en' ? { do: 'say', text, id: 'greet' } : { do: 'play', id: 'hiThere' });   // a name is always said live
+    await wait(GREET_HOLD, r);
+    if (env.mode === 'first') { phase('cta'); body.classList.add('cta-on'); $('cta').focus({ preventScroll: true }); return; }
+    $('greet').classList.remove('on'); await wait(900, r);
+    await farewell(r, 'farewell');
+  }
+  // The end: Kira says its last line, then goes home while the veil fades: up under the notch and drawn into it, the way it rose
+  // from behind the Dock (Swift then opens Kira's box from that same notch). Without the notch it glides to the menu bar icon.
+  const SINK_IN = bez(.55, 0, .8, .45);   // gathering speed, as if pulled
+  async function farewell(r, line, next = 'close') {
+    phase('farewell'); body.classList.remove('cta-on'); $('greet').classList.remove('on');
+    if (line) { await speak(line, r); await wait(400, r); $('line').classList.add('out'); }
+    phase('leaving'); body.classList.add('leaving');
+    if (!env.notch) { go('menu', calm() ? 900 : 1500, OUT); await wait(calm() ? 1000 : 1600, r); }
+    else if (calm()) { move = { at: performance.now(), ms: 900, from: { ...orbAt(performance.now()).main, a: 1 }, to: { ...spots.dock(), a: 0 }, ease: LINEAR, kind: '' }; await wait(1000, r); }
+    else {
+      go('dock', 1300, INOUT); await wait(1300, r);
+      go('home', 700, SINK_IN, 'sink'); await wait(760, r);
+    }
+    post({ do: 'done', next });
+  }
+  const begin = scene => { const r = ++run; scene(r).catch(e => { if (e !== STOP) throw e; }); };
+  // Skip: everything before the greeting settles in place, softly, and the scene goes on from there.
+  const skip = () => {
+    if (!['rise', 'logo', 'words'].includes(phase())) return;
+    post({ do: 'stop' }); drop = null;
+    if (move.kind === 'rise' || orbAt(performance.now()).main.y > H) move = { at: performance.now(), ms: 700, from: { ...spots.top(), a: 0 }, to: 'top', ease: LINEAR, kind: '' };
+    else go('top', 700, OUT);
+    body.classList.add('logo', 'past-logo'); $('line').classList.add('out');
+    begin(greet);
+  };
+
+  const soundLabel = () => $('sound').setAttribute('aria-label', KIRA.t(env.muted ? 'chrome.unmute' : 'chrome.mute'));
+  $('skip').onclick = skip;
+  $('cta').onclick = () => { if (phase() === 'cta') begin(r => farewell(r, 'setup', 'setup')); };
+  $('sound').onclick = () => { env.muted = !env.muted; body.classList.toggle('muted', env.muted); soundLabel(); if (env.muted) post({ do: 'stop' }); post({ do: 'mute', on: env.muted }); };
+  addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    if (['rise', 'logo', 'words'].includes(phase())) skip();   // the first Esc skips the intro; the next one closes
+    else if (phase() !== 'leaving') { run++; post({ do: 'stop' }); post({ do: 'done', next: env.mode === 'first' ? 'later' : 'close' }); }
+  });
+  addEventListener('resize', resize);
+
+  // ---- from Swift
+  window.boot = {
+    // {mode: 'first' | 'replay', name, muted, reduced, insets: {top, bottom}, notch: {x, w, h, hardware} (Kira is docked there), status: {x, y}}, sent before start()
+    env(e) {
+      Object.assign(env, e || {}); KIRA.setUI(e?.uiLanguage || 'en');
+      body.classList.toggle('muted', !!env.muted); body.classList.toggle('calm', calm()); soundLabel();
+      document.documentElement.style.setProperty('--safe-t', (env.insets.top || 0) + 'px'); document.documentElement.style.setProperty('--safe-b', (env.insets.bottom || 0) + 'px');
+    },
+    voice(v) { if (v && v.state === 'start') heard[v.id]?.(performance.now()); if (v && v.state !== 'start') target = 0; },
+    level(v) { target = Math.max(0, Math.min(1, +v || 0)); },
+    visible(on) { const was = visible; visible = !!on; if (visible && !was) requestAnimationFrame(frame); },
+    start() { if (!run) begin(intro); },
+  };
+  // For tests and previews: pose(kind, ms) is the orb ms into the rise ('rise'), the logo drop ('drop') or the notch ('sink', needs env.notch),
+  // without touching the live scene.
+  const pose = (kind, ms) => {
+    const saved = [move, drop];
+    if (kind === 'rise') { move = { at: 0, ms: RISE, from: spots.below(), to: 'center', ease: INOUT, kind: 'rise' }; drop = null; }
+    if (kind === 'drop') { move = { at: 0, ms: TO_LOGO, from: spots.center(), to: 'top', ease: INOUT, kind: '' }; drop = { at: TO_LOGO * .55, to: dotSpot() }; }
+    if (kind === 'sink') { move = { at: 0, ms: 700, from: spots.dock(), to: 'home', ease: SINK_IN, kind: 'sink' }; drop = null; }
+    const s = orbAt(ms); [move, drop] = saved; return s;
+  };
+  window.__boot = { orbAt, pose, orb, phase, env, R: () => R, freeze() { visible = false; }, show(kind, ms) { visible = false; const s = pose(kind, ms); s.voice = 0; orb.draw(s); return s; } };
+
+  resize(); soundLabel(); body.classList.toggle('calm', calm());
+  reduced.addEventListener('change', () => body.classList.toggle('calm', calm()));
+  requestAnimationFrame(frame);
+  // Swift calls boot.env() and boot.start() once the page has loaded; on its own (a browser, a test) it starts by itself.
+  setTimeout(() => window.boot.start(), window.webkit?.messageHandlers?.boot && !window.__BOOT_SELF ? 1500 : 30);
+</script>
+</body></html>

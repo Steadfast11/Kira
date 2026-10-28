@@ -1,0 +1,17 @@
+{
+  "_": "Kira's boot voice. Change the voice or a line here, then run: tools/make_boot_voice.py. With your own recordings, put <id>.m4a here and run it with --align-only. {WORDMARK} is filled in from 'wordmark'.",
+  "voice": "af_heart",
+  "speed": 0.94,
+  "lang": "en-us",
+  "wordmark": "Kira",
+  "lines": {
+    "welcome": "Welcome to {WORDMARK}. I'm your assistant.",
+    "askName": "So, what should I call you?",
+    "hiThere": "Hi there, great to meet you!",
+    "language": "What language do you speak?",
+    "setup": "Now let's set me up. It only takes a minute.",
+    "hotkey": "Hold Control, Option and Space, and say hi.",
+    "heard": "I heard you. That's all it takes.",
+    "farewell": "You're all set. I'll be right up here whenever you need me."
+  }
+}
