@@ -1,6 +1,7 @@
 #!/bin/bash
 # Astra project — Copyright (c) 2026 Xasan Abdukhafizov.
 # Installs Kira: builds Kira.app, starts it at login, and (re)starts it now. Run it again after any change.
+# KIRA_RELEASE_ZIP=/path/Kira.zip ./build.sh only packages a downloadable app: no install, no source path, ad hoc signed.
 set -e; cd "$(dirname "$0")"
 VERSION=$(tr -d '\n' < VERSION)
 [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Invalid VERSION: $VERSION"; exit 1; }
@@ -31,6 +32,8 @@ cp kira.py kokoro_say.py speech_runtime.py access_policy.py "$APP/Contents/Resou
 cp ui/*.html ui/*.js "$APP/Contents/Resources/ui/"
 cp ui/boot/*.m4a ui/boot/timings.json "$APP/Contents/Resources/ui/boot/"   # the boot's recorded voice and sounds (tools/make_boot_voice.py)
 cp ui/AppIcon.icns "$APP/Contents/Resources/"
+SOURCE_DIR=$(pwd)   # updates pull from this checkout; a downloadable app has none and updates from GitHub Releases
+if [ -n "$KIRA_RELEASE_ZIP" ]; then SOURCE_DIR=""; fi
 cat > "$APP/Contents/Info.plist" <<P
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -43,7 +46,7 @@ cat > "$APP/Contents/Info.plist" <<P
 <key>CFBundleShortVersionString</key><string>$VERSION</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleIconFile</key><string>AppIcon</string>
-<key>KiraSource</key><string>$(pwd)</string>
+<key>KiraSource</key><string>$SOURCE_DIR</string>
 <key>LSUIElement</key><true/>
 <key>NSMicrophoneUsageDescription</key><string>Kira listens when you use its shortcut or microphone button.</string>
 <key>NSAppleEventsUsageDescription</key><string>Kira controls apps like Finder, Chrome and Music when you ask it to.</string>
@@ -64,8 +67,14 @@ if [ -z "$ID" ]; then
   rm -rf "$K"
   ID=$(security find-identity -p codesigning | awk '/Kira Local Signing/{print $2; exit}')
 fi
+if [ -n "$KIRA_RELEASE_ZIP" ]; then ID=""; fi   # a downloadable app is signed ad hoc, not with this Mac's identity
 codesign -s "${ID:--}" --force "$APP"
 codesign --verify --strict "$APP"
+if [ -n "$KIRA_RELEASE_ZIP" ]; then
+  ditto -c -k --sequence --keepParent "$APP" "$KIRA_RELEASE_ZIP"
+  echo "Packaged $KIRA_RELEASE_ZIP"
+  exit 0
+fi
 # Same-filesystem renames: the exit trap restores the previous app if promotion fails.
 if [ -e "$TARGET" ]; then mv "$TARGET" "$STAGE/previous.app"; fi
 mv "$APP" "$TARGET"

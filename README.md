@@ -1,37 +1,64 @@
-# Kira from Astra
+# Kira
 
-Kira — macOS uchun ovozli va AI yordamchi. U ekraningizdagi narsani ko'rsatishingiz, savol berishingiz, kalendar bilan ishlashingiz va fon agentlarini boshqarishingiz mumkin.
+Kira is a voice and AI assistant for macOS. It can see what is on your screen, answer questions, manage your calendar, and run background agents.
 
-## Asosiy imkoniyatlar
+## Download and run
 
-- **Ovoz va chat:** savolni yozing yoki ayting, javobni Kira ovozli o'qib beradi.
-- **Point at your screen:** ekrandagi narsani belgilang (aylana chizing, bosing yoki chizib qo'ying), so'ngra savolingizni yozing yoki ayting. Kira belgilangan joyni ko'radi.
-- **Kalendar:** "Move my dentist appointment to 4." kabi so'rovlar bilan voqealarni boshqaring. Adding is immediate; moving or deleting asks first.
-- **Fon agentlari:** uzoq vazifalarni fonda bajartiring va natijasini keyinroq ko'ring.
-- **Yig'ilishlar va diktovka:** yig'ilish xulosasi va matnni ovoz orqali kiritish.
+1. Download `Kira.zip` from the [latest release](https://github.com/Steadfast11/Kira/releases/latest).
+2. Unzip it and drag `Kira.app` into your **Applications** folder.
+3. Open `Kira` by double-clicking it. The first time, macOS may say the app is from an unidentified developer. Kira is not signed with an Apple developer account yet, so do one of these:
+   - Open **System Settings → Privacy & Security**, scroll down, and click **Open Anyway**.
+   - Or run this command in Terminal once:
+     ```bash
+     xattr -dr com.apple.quarantine /Applications/Kira.app
+     ```
+4. When Kira opens, its setup window helps you connect an AI service.
+5. To talk to Kira, hold **Control + Option + Space** and speak.
 
-## O'rnatish
+To update, download the newest `Kira.zip` from the releases page and replace the old app.
 
-Talablar: macOS 26 yoki undan yangi, Xcode Command Line Tools.
+## Requirements
 
-1. Manba kodni yuklab oling va papkani `KIRA_DIR` orqali ko'rsating (standart: `~/.kira`).
-2. `install.sh` ni ishga tushiring. U `build.sh` orqali Kira ni quradi va `~/Applications/Kira.app` ga o'rnatadi.
-3. Kira ochilgach, sozlash oynasi qolgan qadamlarni ko'rsatadi.
+- macOS 26 or later on an Apple Silicon Mac (M1 or newer).
+- An AI service: Claude (Claude Code), Codex, or your own API key. The setup window asks which one you want to use.
+- Python 3 (included with macOS; if it is missing, Xcode Command Line Tools install it).
 
-Nix orqali o'rnatish uchun `flake.nix` dan foydalaning.
+## Permissions
 
-## Yangilanishlar
+Kira needs these macOS permissions: microphone, speech recognition, screen recording, Accessibility, calendar, and Automation. Each permission is requested only for the task that needs it. Calendar access lets Kira read your calendar and add the events you ask for.
 
-Nix orqali o'rnatilgan bo'lsa, Settings'da "Updates are managed by Nix" yozuvi chiqadi. Yangilash uchun `nix profile upgrade` yoki `nix run` ni qayta ishga tushiring.
+## Features
 
-## Ruxsatlar
+- **Voice and chat:** type or say a question, and Kira reads the answer aloud.
+- **Point at your screen:** circle, click, or scribble on anything on screen, then type or say your question. Kira sees the marked spot.
+- **Calendar:** manage events with requests such as "Move my dentist appointment to 4." Adding is immediate; moving or deleting asks first.
+- **Background agents:** run long tasks in the background and check the results later.
+- **Meetings and dictation:** get meeting summaries and dictate text by voice.
 
-Kira ishlashi uchun macOS ruxsatlari kerak bo'ladi: mikrofon, nutni tanish, ekranni yozib olish, Accessibility, kalendar va Automation. Har bir ruxsat faqat o'z vazifasi uchun so'raladi. Kalendar ruxsati Kira ga kalendarni o'qish va so'ralgan voqealarni qo'shish imkonini beradi.
+## Build from source (for developers)
 
-## Mualliflik
+Requirements: Xcode Command Line Tools (`xcode-select --install`).
 
-Muallif: **Xasan Abdukhafizov**
+```bash
+git clone https://github.com/Steadfast11/Kira.git
+cd Kira
+./build.sh
+```
 
-Copyright © 2026 Xasan Abdukhafizov.
+`build.sh` builds Kira, installs it to `~/Applications/Kira.app`, and starts it. A copy built from a source checkout updates itself from GitHub through **Settings → Updates**.
 
-Mualliflik qaydi: AUTHORS.md va COPYRIGHT. Uchinchi tomon huquqlari ushbu qayd bilan o‘zgarmaydi.
+To install with Nix, use `flake.nix`. In that case Settings shows "Updates are managed by Nix", and you update with `nix profile upgrade`.
+
+To build the downloadable `Kira.zip` yourself:
+
+```bash
+KIRA_RELEASE_ZIP=$PWD/dist/Kira.zip ./build.sh
+```
+
+## Author
+
+Author: **Xasan Abdukhafizov**
+
+Copyright © 2026 Xasan Abdukhafizov. Licensed under the [Apache License 2.0](LICENSE).
+
+Authorship notice: see AUTHORS.md and COPYRIGHT. Third-party rights are not changed by this notice.

@@ -26,8 +26,6 @@ CLAUDE.local.md
 .claude/
 .cursor/
 index.html
-docs/kira-film.mp4
-docs/film-poster.png
 
 # Nix build result symlinks
 /result
