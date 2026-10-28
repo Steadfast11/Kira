@@ -1,5 +1,5 @@
 # Kira from Astra
 
-Mualliflik da’vosini bildiruvchi: Xasan Abdukhafizov.
+Declarant of the authorship claim: Xasan Abdukhafizov.
 
-Ushbu qayd loyiha egasining bayonoti asosida kiritildi. Mualliflik nizosi bo‘yicha mustaqil ekspertiza yoki davlat guvohnomasi emas. Uchinchi tomon komponentlariga tegishli huquqlar saqlanadi.
+This notice was entered on the basis of the project owner's statement. It is not an independent expert examination or a state certificate in an authorship dispute. Rights belonging to third-party components are preserved.

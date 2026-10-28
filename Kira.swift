@@ -4627,11 +4627,13 @@ enum Updater {
     }
     static let version: String = {
         if managedByNix { return (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown") + " · Nix" }
+        if src.isEmpty { return Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "" }   // downloaded app: no git checkout
         return sh(#"cd "$0" 2>/dev/null && git log -1 --format='%h · %cd' --date=format:'%b %-d, %Y'"#).out.trimmingCharacters(in: .whitespacesAndNewlines)
     }()
     static func check(_ done: @escaping () -> Void = {}) {
         if managedByNix { status = "Run nix profile upgrade or nix run again."; done(); return }
-        if src.isEmpty || ProcessInfo.processInfo.environment["KIRA_DIR"] != nil { status = "Preview build"; done(); return }
+        if src.isEmpty { status = "Get the newest version from GitHub Releases"; done(); return }
+        if ProcessInfo.processInfo.environment["KIRA_DIR"] != nil { status = "Preview build"; done(); return }
         guard !checking else { done(); return }
         checking = true
         status = "Checking…"; done()
@@ -7617,11 +7619,11 @@ enum Hands {
 // page (ui.html), so every button, card and animation works as before. See App.applyDock.
 
 
-/// Notch ko'rinishining hamma sozlamalari. `notch-theme.json` dagi qiymatlar standart qiymatlar ustidan
-/// chuqur birlashtiriladi: faylga faqat o'zgartirmoqchi bo'lgan qiymatlarni yozsangiz ham bo'ladi.
+/// All notch appearance settings. Values in `notch-theme.json` are merged over the defaults
+/// deeply, so the file only needs the values you want to change.
 ///
-/// O'lchamlar (kenglik, shrift, bo'shliq, orb) "dizayn birligi"da berilgan; ekranda ular `scale` ga
-/// ko'paytiriladi (2× piksel dizayn uchun 0.5).
+/// Sizes (width, font, spacing, orb) are given in "design units"; on screen they are
+/// multiplied by `scale` (0.5 for the 2× pixel design).
 public struct NotchTheme: Codable, Equatable {
     public struct Stop: Codable, Equatable {
         public var color: String
@@ -7631,9 +7633,9 @@ public struct NotchTheme: Codable, Equatable {
     public struct BackgroundSpec: Codable, Equatable {
         /// Gradient to'xtash nuqtalari (tepadan pastga, `at` 0...1).
         public var stops: [Stop]
-        /// Pastki qism (taxminan 60% dan keyin) shaffofligi: orqadagi xira blur ko'rinib turishi uchun.
+        /// Bottom part (after about 60%) transparency, so the blurred background shows through.
         public var bottomAlpha: Double
-        /// Pastki qismda orqa fonning haqiqiy xira (blur) ko'rinishi.
+        /// The real blurred background view in the bottom part.
         public var blur: Bool
     }
 
@@ -7649,7 +7651,7 @@ public struct NotchTheme: Codable, Equatable {
         public var opacity: Double
     }
 
-    /// Ochiq oynaning eng pastidagi juda mayin rangli nur (shaffof shishaning eng ko'rinadigan joyi).
+    /// Very soft colored light at the bottom of the open window (the most visible part of the clear glass).
     public struct GlowSpec: Codable, Equatable {
         public var color: String
         public var opacity: Double
@@ -7672,7 +7674,7 @@ public struct NotchTheme: Codable, Equatable {
         public var width: Double
         public var height: Double
         public var bottomRadius: Double
-        /// Yuqori burchaklardagi botiq "quloq"ning radiusi (ekran chetiga silliq qo'shilish uchun).
+        /// Radius of the concave "ear" at the top corners (so it joins the screen edge smoothly).
         public var topRadius: Double
         /// Sichqoncha notch ustiga kelganda ikki yonga kengayish miqdori (quloq radiusi, dizayn birligida).
         public var hoverEar: Double
@@ -7693,7 +7695,7 @@ public struct NotchTheme: Codable, Equatable {
         public var orbPeriod: Double
         /// To'lqin bir sikl vaqti (soniya).
         public var wavePeriod: Double
-        /// Matn yozilishida bir belgi uchun millisekund.
+        /// Milliseconds per character while text is typed.
         public var typeMs: Double
     }
 
@@ -7713,7 +7715,7 @@ public struct NotchTheme: Codable, Equatable {
     }
 
     public var scale: Double
-    /// Notchdagi matnlar tili: `"uz"`, `"ru"` yoki `"en"` (boshqa qiymatda `"uz"`).
+    /// Language of the notch text. Only `"en"` ships.
     public var language: String
     public var background: BackgroundSpec
     public var edge: EdgeSpec
@@ -7727,10 +7729,10 @@ public struct NotchTheme: Codable, Equatable {
     public var orb: OrbSpec
     public var elements: ElementSpec
 
-    /// Foydalanuvchi bergan spetsifikatsiya.
+    /// User-provided specification.
     public static let `default` = NotchTheme(
         scale: 0.5,
-        language: "uz",
+        language: "en",
         background: BackgroundSpec(
             stops: [
                 Stop(color: "#000000", at: 0.0),
@@ -7763,7 +7765,7 @@ public struct NotchTheme: Codable, Equatable {
     )
 }
 
-// MARK: - Hisoblangan qiymatlar (nuqtalarda)
+// MARK: - Computed values (in points)
 
 extension NotchTheme {
     var unit: CGFloat { CGFloat(max(scale, 0.05)) }
@@ -7777,7 +7779,7 @@ extension NotchTheme {
     var sheetPadding: CGFloat { CGFloat(dimensions.padding) * unit }
     var textInset: CGFloat { CGFloat(dimensions.textInset) * unit }
     var orbSize: CGFloat { CGFloat(orb.size) * unit }
-    /// O'qib bo'ladigan eng kichik shrift o'lchamlari bilan.
+    /// With the smallest font sizes that stay readable.
     var titleFontSize: CGFloat { max(CGFloat(font.title) * unit, 10) }
     var bodyFontSize: CGFloat { max(CGFloat(font.body) * unit, 11) }
     var hintFontSize: CGFloat { max(CGFloat(font.hint) * unit, 10) }
@@ -7795,8 +7797,8 @@ extension NotchTheme {
         .smooth(duration: max(motion.response, 0.05), extraBounce: 0)
     }
 
-    /// Fon gradienti. Gradient `sheetMinHeight` balandlik bo'ylab hisoblanadi, shuning uchun past
-    /// (ixcham) shakl faqat gradientning qora qismini ko'radi.
+    /// Background gradient. It is computed over the `sheetMinHeight` height, so a low
+    /// (compact) shape only shows the black part of the gradient.
     func surface(height: CGFloat) -> LinearGradient {
         let sorted = background.stops.sorted { $0.at < $1.at }
         guard !sorted.isEmpty else {
@@ -7817,7 +7819,7 @@ extension NotchTheme {
 // MARK: - Rang (hex)
 
 extension NotchTheme {
-    /// `#RRGGBB` yoki `#RRGGBBAA` ni qismlarga ajratadi; noto'g'ri bo'lsa `nil`.
+    /// Splits `#RRGGBB` or `#RRGGBBAA` into parts; returns `nil` if invalid.
     public static func rgba(hex: String) -> (r: Double, g: Double, b: Double, a: Double)? {
         var text = hex.trimmingCharacters(in: .whitespaces)
         if text.hasPrefix("#") { text.removeFirst() }
@@ -7840,7 +7842,7 @@ extension NotchTheme {
 }
 
 extension Color {
-    /// Noto'g'ri hex bo'lsa, xatoni darhol ko'rsatish uchun binafsha-pushti rang chiqadi.
+    /// An invalid hex shows a purple-pink color so the mistake is visible at once.
     init(hex: String) {
         if let c = NotchTheme.rgba(hex: hex) {
             self.init(.sRGB, red: c.r, green: c.g, blue: c.b, opacity: c.a)
@@ -7850,14 +7852,14 @@ extension Color {
     }
 }
 
-// MARK: - Fayldan yuklash
+// MARK: - Loading from file
 
 extension NotchTheme {
     public enum LoadError: Error {
         case notAnObject
     }
 
-    /// Standart qiymatlar ustiga foydalanuvchi JSON'ini chuqur birlashtirib, natijani qaytaradi.
+    /// Deeply merges the user's JSON over the default values and returns the result.
     public static func merged(overrides data: Data) throws -> NotchTheme {
         let base = try JSONSerialization.jsonObject(with: JSONEncoder().encode(NotchTheme.default))
         let user = try JSONSerialization.jsonObject(with: data)
@@ -7882,9 +7884,9 @@ extension NotchTheme {
     }
 }
 
-// MARK: - Matnlar (tillar)
+// MARK: - Text (languages)
 
-/// Notchdagi hamma matn. Til `notch-theme.json` dagi `language` bilan tanlanadi.
+/// All notch text. The language is chosen by `language` in `notch-theme.json`.
 public struct NotchStrings: Equatable {
     public var listening: String
     public var thinking: String
@@ -7895,7 +7897,7 @@ public struct NotchStrings: Equatable {
     public var hintSuffix: String
     public var demo: Demo
 
-    /// "Notch namoyishi" matnlari.
+    /// "Notch demo" texts.
     public struct Demo: Equatable {
         public var question: String
         public var searching: String
@@ -7909,63 +7911,8 @@ public struct NotchStrings: Equatable {
         public var doneTitle: String
     }
 
-    public static func forLanguage(_ code: String) -> NotchStrings {
-        switch code.lowercased() {
-        case "ru": return .ru
-        case "en": return .en
-        default: return .uz
-        }
-    }
-
-    public static let uz = NotchStrings(
-        listening: "Tinglayapman",
-        thinking: "O'ylayapman",
-        done: "Tayyor",
-        acting: "Bajarilmoqda",
-        hintPrefix: "Yozing yoki",
-        hintSuffix: "ni bosib turib gapiring",
-        demo: Demo(
-            question: "Alisherga Telegram'da «kechikaman» deb yoz",
-            searching: "Telegram: kontakt qidirilmoqda",
-            found: "Kontakt topildi",
-            sent: "Xabar yuborildi",
-            cardTitle: "Xabar tayyor",
-            cardRows: [
-                .init("Kimga", "Alisher"),
-                .init("Matn", "kechikaman"),
-                .init("Holat", "Yuborishga tayyor", tone: .positive),
-            ],
-            reply: "Yubordim. Alisherga «kechikaman» deb yozdim.",
-            actTitle: "Telegram: xabar yozish",
-            actSub: "Kontaktni topdim, yozyapman",
-            doneTitle: "Yubordim"
-        )
-    )
-
-    public static let ru = NotchStrings(
-        listening: "Слушаю",
-        thinking: "Думаю",
-        done: "Готово",
-        acting: "Выполняю",
-        hintPrefix: "Напишите или удерживайте",
-        hintSuffix: "и говорите",
-        demo: Demo(
-            question: "Напиши Алишеру в Telegram «опоздаю»",
-            searching: "Telegram: ищу контакт",
-            found: "Контакт найден",
-            sent: "Сообщение отправлено",
-            cardTitle: "Сообщение готово",
-            cardRows: [
-                .init("Кому", "Алишер"),
-                .init("Текст", "опоздаю"),
-                .init("Статус", "Готово к отправке", tone: .positive),
-            ],
-            reply: "Отправил. Написал Алишеру «опоздаю».",
-            actTitle: "Telegram: пишу сообщение",
-            actSub: "Нашёл контакт, пишу",
-            doneTitle: "Отправлено"
-        )
-    )
+    /// Only English copy ships, so every language code maps to it.
+    public static func forLanguage(_ code: String) -> NotchStrings { .en }
 
     public static let en = NotchStrings(
         listening: "Listening",
@@ -7993,8 +7940,8 @@ public struct NotchStrings: Equatable {
     )
 }
 
-/// `notch-theme.json` ni kuzatadi: fayl bo'lmasa standart qiymatlar bilan yaratadi, o'zgarsa qayta
-/// yuklaydi (har 0.5 soniyada tahrirlangan vaqtni tekshiradi). Xatoli faylda oldingi mavzu qoladi.
+/// Watches `notch-theme.json`: creates it with the default values if missing, and reloads it when it changes
+/// (checks the modification time every 0.5 seconds). A broken file keeps the previous theme.
 @MainActor
 public final class ThemeStore {
     public private(set) var theme: NotchTheme = .default
@@ -8021,24 +7968,24 @@ public final class ThemeStore {
         timer = nil
     }
 
-    /// Faylni hozir qayta o'qiydi.
+    /// Reads the file again now.
     public func reload() {
         lastModified = modificationDate()
         do {
             theme = try NotchTheme.merged(overrides: Data(contentsOf: url))
         } catch {
-            NSLog("Kira: notch-theme.json o'qilmadi, oldingi mavzu qoladi: \(error)")
+            NSLog("Kira: could not read notch-theme.json, keeping the previous theme: \(error)")
             return
         }
         onChange?(theme)
     }
 
-    /// Tilni faylga yozadi (qolgan sozlamalar saqlanadi) va mavzuni darhol qayta yuklaydi.
+    /// Writes the language to the file (other settings are kept) and reloads the theme at once.
     public func setLanguage(_ code: String) {
         set(["language": code])
     }
 
-    /// Ko'rsatilgan kalitlarni faylga yozadi (qolgan sozlamalar saqlanadi) va mavzuni darhol qayta yuklaydi.
+    /// Writes the given keys to the file (other settings are kept) and reloads the theme at once.
     public func set(_ values: [String: Any]) {
         var object: [String: Any] = [:]
         if let data = try? Data(contentsOf: url),
@@ -8055,7 +8002,7 @@ public final class ThemeStore {
             try data.write(to: url)
             reload()
         } catch {
-            NSLog("Kira: sozlama yozilmadi: \(error)")
+            NSLog("Kira: setting was not saved: \(error)")
         }
     }
 
@@ -8078,16 +8025,16 @@ public final class ThemeStore {
             )
             try encoder.encode(NotchTheme.default).write(to: url)
         } catch {
-            NSLog("Kira: standart mavzu fayli yozilmadi: \(error)")
+            NSLog("Kira: could not write the default theme file: \(error)")
         }
     }
 }
 
 // ---- result card (used by the theme's demo strings) ----
-/// Natija kartochkasi: sarlavha, ixtiyoriy belgi va "kalit: qiymat" qatorlari.
+/// Result card: a title, an optional symbol and "key: value" rows.
 public struct ResultCard: Equatable {
     public struct Row: Equatable {
-        /// Qiymatning ahamiyati: rangli nuqta bilan ko'rsatiladi.
+        /// The importance of a value is shown with a colored dot.
         public enum Tone: Equatable {
             case normal, positive, warning
         }
@@ -8113,7 +8060,7 @@ public struct ResultCard: Equatable {
         self.rows = rows
     }
 
-    /// Kartochka o'chirilgan bo'lsa, natija oddiy matn qatorlari sifatida ko'rsatiladi.
+    /// When the card is off, the result is shown as plain text lines.
     public var plainLines: [String] {
         [title] + rows.map { "\($0.label): \($0.value)" }
     }
@@ -8121,7 +8068,7 @@ public struct ResultCard: Equatable {
 
 
 // ---- notch shape and glass ----
-/// Notch shakli: yuqorida ikki tomonga botiq "quloq" (radiusi `ear`), pastda yumaloq burchaklar.
+/// Notch shape: concave "ears" on both sides at the top (radius `ear`), rounded corners at the bottom.
 /// Kengligi tana kengligi + 2 × `ear`; tana quloqlar orasida turadi.
 struct NotchShape: Shape {
     var ear: CGFloat
@@ -8138,7 +8085,7 @@ struct NotchShape: Shape {
         var path = Path()
         path.move(to: CGPoint(x: rect.minX, y: rect.minY))
         path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
-        // O'ng quloq: markazi shaklning tashqarisida, egilish tanaga qarab tushadi.
+        // Right ear: its center is outside the shape, and the curve dips toward the body.
         path.addArc(
             center: CGPoint(x: rect.maxX, y: rect.minY + e), radius: e,
             startAngle: .degrees(270), endAngle: .degrees(180), clockwise: true
@@ -8163,7 +8110,7 @@ struct NotchShape: Shape {
     }
 }
 
-/// Mahalliy shisha materiali; kamera joyi maska bilan qora qoladi.
+/// Native glass material; the camera area stays black through a mask.
 struct LiquidGlassSurface: NSViewRepresentable {
     var active: Bool
     var interactive: Bool
@@ -8189,7 +8136,7 @@ struct LiquidGlassSurface: NSViewRepresentable {
         if #available(macOS 26.0, *), let glass = view as? NSGlassEffectView {
             glass.cornerRadius = cornerRadius
         }
-        // `effectIsInteractive` faqat macOS 27 SDK'da e'lon qilingan; eski SDK (CI) ham yig'ishi uchun KVC orqali.
+        // `effectIsInteractive` is declared only in the macOS 27 SDK; KVC keeps older SDKs (CI) compiling.
         if #available(macOS 27.0, *), let glass = view as? NSGlassEffectView,
            glass.responds(to: NSSelectorFromString("setEffectIsInteractive:")) {
             glass.setValue(interactive, forKey: "effectIsInteractive")
@@ -8915,7 +8862,7 @@ final class SetupFlow: NSObject, WKScriptMessageHandler, WKNavigationDelegate, N
             guard primary.range(of:"^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8}){0,2}$",options:.regularExpression) != nil,
                   let languages=values["languages"] as? [String], !languages.isEmpty, languages.count<=20, languages.contains(primary),
                   languages.allSatisfy({$0.range(of:"^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8}){0,2}$",options:.regularExpression) != nil}),
-                  let ui=values["uiLanguage"] as? String, ["en","uz","ru"].contains(ui) else { call("notice",["text":"Choose a primary language and an available interface language."]); return }
+                  let ui=values["uiLanguage"] as? String, ["en"].contains(ui) else { call("notice",["text":"Choose a primary language and an available interface language."]); return }
             edits.merge(["primaryLanguage":primary,"languages":Array(Set(languages)).sorted(),"uiLanguage":ui]){$1}
         }
         guard !edits.isEmpty else { call("notice",["text":"No valid setup changes were supplied."]); return }; edits["setupStep"]=next
