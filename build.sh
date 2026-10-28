@@ -71,7 +71,7 @@ if [ -n "$KIRA_RELEASE_ZIP" ]; then ID=""; fi   # a downloadable app is signed a
 codesign -s "${ID:--}" --force "$APP"
 codesign --verify --strict "$APP"
 if [ -n "$KIRA_RELEASE_ZIP" ]; then
-  ditto -c -k --sequence --keepParent "$APP" "$KIRA_RELEASE_ZIP"
+  ditto -c -k --keepParent "$APP" "$KIRA_RELEASE_ZIP"
   echo "Packaged $KIRA_RELEASE_ZIP"
   exit 0
 fi
